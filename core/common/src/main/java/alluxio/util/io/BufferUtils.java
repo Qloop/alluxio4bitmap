@@ -12,7 +12,11 @@
 package alluxio.util.io;
 
 import alluxio.Constants;
+
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -21,9 +25,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utilities related to buffers, not only {@link ByteBuffer}.
@@ -174,7 +177,13 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingIntByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 4);
     for (int k = 0; k < len; k++) {
@@ -182,7 +191,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingStringByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 4 + (len - 1) * len / 2);
     for (int k = 0; k < len; k++) {
@@ -206,7 +221,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingLongByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 8);
     for (int k = 0; k < len; k++) {
@@ -214,7 +235,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingShortByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 2);
     for (int k = 0; k < len; k++) {
@@ -222,7 +249,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingBoolByteArray(int start, int len) {
     byte[] ret = new byte[len];
     for (int k = 0; k < len; k++) {
@@ -230,15 +263,27 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static boolean[] getIncreasingBoolArray(int start, int len) {
     boolean[] ret = new boolean[len];
     for (int k = 0; k < len; k++) {
-      ret[k] = ((k + start) % 2) == 1;
+      ret[k] = Math.abs((k + start) % 2) == 1;
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingDoubleByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 8);
     for (int k = 0; k < len; k++) {
@@ -246,7 +291,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static byte[] getIncreasingFloatByteArray(int start, int len) {
     ByteBuffer buffer = ByteBuffer.allocate(len * 4);
     for (int k = 0; k < len; k++) {
@@ -254,7 +305,13 @@ public final class BufferUtils {
     }
     return buffer.array();
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static int[] getIncreasingIntArray(int start, int len) {
     int[] ret = new int[len];
     for (int k = 0; k < len; k++) {
@@ -262,7 +319,13 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static long[] getIncreasingLongArray(int start, int len) {
     long[] ret = new long[len];
     for (int k = 0; k < len; k++) {
@@ -270,7 +333,13 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static float[] getIncreasingFloatArray(int start, int len) {
     float[] ret = new float[len];
     for (int k = 0; k < len; k++) {
@@ -278,7 +347,13 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static short[] getIncreasingShortArray(int start, int len) {
     short[] ret = new short[len];
     for (int k = 0; k < len; k++) {
@@ -286,7 +361,13 @@ public final class BufferUtils {
     }
     return ret;
   }
-
+  /**
+   * Gets an increasing sequence of bytes starting with the given value.
+   *
+   * @param start the starting value to use
+   * @param len the target length of the sequence
+   * @return an increasing sequence of bytes
+   */
   public static double[] getIncreasingDoubleArray(int start, int len) {
     double[] ret = new double[len];
     for (int k = 0; k < len; k++) {

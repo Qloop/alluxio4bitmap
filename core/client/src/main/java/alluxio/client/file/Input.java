@@ -22,92 +22,108 @@ import java.io.IOException;
 public interface Input extends Closeable {
 
   /**
-   * read next 1 byte to int
+   * Read one byte at current position
    */
   int readByte() throws IOException;
 
   /**
-   * read next 1 byte to boolean
+   * Read one byte at current position ,return the
+   * boolean value of comparing this byte value with one
    */
   boolean readBool() throws IOException;
 
   /**
-   * read next 2 bytes to int
+   * Read two bytes at current position,converting to short value
    */
   int readShort() throws IOException;
 
   /**
-   * read next 4 bytes to int
+   * Read four bytes at current position,converting to int value
    */
   int readInt() throws IOException;
 
   /**
-   * read next 4 bytes to float
+   * Read four bytes at current position,converting to float value
    */
   float readFloat() throws IOException;
 
   /**
-   * read next 8 bytes to long
+   * Read eight bytes at current position,converting to long value
    */
   long readLong() throws IOException;
 
   /**
-   * read next 8 bytes to double
+   * Read eight bytes at current position,converting to double value
    */
   double readDouble() throws IOException;
 
   /**
-   * read next 4 bytes to int as the length of the string,
-   * then read next length bytes to string
+   * Read string value using below rules.
+   *
+   * 1.Read int value at the current buffer position, indicating the offset of the string 2.Transfer
+   * bytes from input buffer into a temp byte array,starting at current position and using the
+   * corresponding offset value.Then compose this temp byte array into string value as finally
+   * value,in the current byte order
    */
   String readString() throws IOException;
 
 
   /**
-   * close the input
+   * Close the input
    */
   void close() throws IOException;
 
 
   /**
-   * read 1 byte to int at specific position
+   * Read one byte at given position without increments the position of
+   * the buffer
    */
   int readByte(int pos) throws IOException;
 
   /**
-   * read specific position 1 byte to boolean
+   * Read one byte at given position without increments the position of the buffer ,boolean value
+   * of comparing this byte value with one
    */
   boolean readBool(int pos) throws IOException;
 
   /**
-   * read 2 bytes to int at specific position
+   * Read two bytes at given position,converting to float value without increments the position of
+   * the buffer
    */
   int readShort(int pos) throws IOException;
 
   /**
-   * read 4 bytes to int at specific position
+   * Read four bytes at given position,converting to int value without increments the position of
+   * the buffer
    */
   int readInt(int pos) throws IOException;
 
   /**
-   * read  4 bytes to float at specific position
+   * Read four bytes at given position,converting to float value without increments the position of
+   * the buffer
    */
   float readFloat(int pos) throws IOException;
 
   /**
-   * read  8 bytes to long at specific position
+   * Read eight bytes at given position,converting to long value without increments the position of
+   * the buffer
    */
   long readLong(int pos) throws IOException;
 
   /**
-   * read  8 bytes to double at specific position
+   * Read eight bytes at given position,converting to double value without increments the position
+   * of the buffer
    */
   double readDouble(int pos) throws IOException;
 
 
   /**
-   * read specific position 4 bytes to int as the length of the string,
-   * then read next length bytes to string
+   * Read string value using below rules.
+   *
+   * 1.Read int value at the given position, indicating the offset of the string 2.Transfer bytes
+   * into a temp byte array,starting at given position plus another four positions and at the
+   * corresponding offset value.Then compose this temp byte array into string value as finally
+   * value,in the current byte order.This method doesn't increment the position of the buffer
    */
   String readString(int pos) throws IOException;
 }
