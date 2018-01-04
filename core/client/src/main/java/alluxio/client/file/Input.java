@@ -126,4 +126,6 @@ public interface Input extends Closeable {
    * value,in the current byte order.This method doesn't increment the position of the buffer
    */
   String readString(int pos) throws IOException;
+
+  void readBytes(byte[] bytes, int pos) throws IOException;
 }

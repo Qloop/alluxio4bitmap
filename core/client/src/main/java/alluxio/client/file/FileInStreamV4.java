@@ -21,6 +21,7 @@ import alluxio.client.Cancelable;
 import alluxio.client.Locatable;
 import alluxio.client.PositionedReadable;
 import alluxio.client.block.AlluxioBlockStore;
+import alluxio.client.block.BlockInputWrapper;
 import alluxio.client.block.LocalBlockInStreamV2;
 import alluxio.client.block.RemoteBlockInStream;
 import alluxio.client.block.SeekUnsupportedException;
@@ -33,13 +34,16 @@ import alluxio.exception.BlockDoesNotExistException;
 import alluxio.exception.InvalidWorkerStateException;
 import alluxio.exception.PreconditionMessage;
 import alluxio.master.block.BlockId;
+
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.concurrent.NotThreadSafe;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A streaming API to read a file. This API represents a file as a stream of bytes and provides a
@@ -49,15 +53,17 @@ import java.io.InputStream;
  * This class wraps the block in stream for each of the blocks in the file and abstracts the
  * switching between streams. The backing streams can read from Alluxio space in the local machine,
  * remote machines, or the under storage system.
+ * 如果文件不是 Local 模式，同时本地又没有 Worker 的情况下。那么文件系统会将远端文件数据读取到本机的配置位置，
+ * 给一个临时文件名，close 就删除的这么一个文件。此时的数据读取是在Alluxio 管控以外的。
  */
 @PublicApi
 @NotThreadSafe
-public class FileInStreamV2 extends FileInStream {
+public class FileInStreamV4 extends FileInStream {
 
   private static final Logger LOG = LoggerFactory.getLogger(Constants.LOGGER_TYPE);
 
   private static final boolean PACKET_STREAMING_ENABLED =
-          Configuration.getBoolean(PropertyKey.USER_PACKET_STREAMING_ENABLED);
+      Configuration.getBoolean(PropertyKey.USER_PACKET_STREAMING_ENABLED);
 
   /**
    * The instream options.
@@ -91,15 +97,18 @@ public class FileInStreamV2 extends FileInStream {
    */
   private byte[] mSeekBuffer;
   private Input input;
+  private String mTmpBlockPath;
 
   /**
    * Creates a new file input stream.
    *
-   * @param status  the file status
+   * @param status the file status
    * @param options the client options
    */
-  protected FileInStreamV2(URIStatus status, InStreamOptions options, FileSystemContext context) {
+  protected FileInStreamV4(URIStatus status, InStreamOptions options, FileSystemContext context,
+      String tmpBlockPath) {
     super(status, options, context);
+    this.mTmpBlockPath = tmpBlockPath;
     mStatus = status;
     mInStreamOptions = options;
     mOutStreamOptions = OutStreamOptions.defaults();
@@ -114,16 +123,15 @@ public class FileInStreamV2 extends FileInStream {
       updateStreams();
       if (mCurrentBlockInStream instanceof Input) {
         Preconditions.checkState(mCurrentBlockInStream instanceof Input,
-                "block stream in file:%s is:%s should be local mode ",
-                mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream",
-                mStatus.getPath());
+            "block stream in file:%s is:%s should be local mode ",
+            mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream",
+            mStatus.getPath());
         input = (Input) mCurrentBlockInStream;
       } else {
 //        LOG.warn("block stream in file:{} is:{} not local mode and use file input wrapper",
 //            mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream");
 //        input = new BlockInputWrapper(mCurrentBlockInStream);
-
-        throw new SeekUnsupportedException("file stream v2 must get a random block stream.The class of block stream returned" +
+        throw new SeekUnsupportedException("file stream v4 must get a seekable block stream.The class of block stream returned" +
                 "from block store is:" + mCurrentBlockInStream.getClass());
       }
 
@@ -133,7 +141,7 @@ public class FileInStreamV2 extends FileInStream {
     }
     if (mStatus.getBlockIds().size() != 0) {
       Preconditions.checkState(mStatus.getBlockIds().size() == 1,
-              "the file:%s must be consisted of one block", mStatus.getPath());
+          "the file:%s must be consisted of one block", mStatus.getPath());
       if (!isReadingFromLocalBlockWorker()) {
         LOG.warn("file:{} should be local mode", mStatus.getPath());
       }
@@ -147,18 +155,18 @@ public class FileInStreamV2 extends FileInStream {
   /**
    * Creates a new file input stream.
    *
-   * @param status  the file status
+   * @param status the file status
    * @param options the client options
    * @param context file system context
-   * @return the created {@link FileInStreamV2} instance
+   * @return the created {@link FileInStreamV4} instance
    */
   public static FileInStream create(URIStatus status, InStreamOptions options,
-                                    FileSystemContext context) {
+      FileSystemContext context, String tmpBlockPath) {
     if (status.getLength() == Constants.UNKNOWN_SIZE) {
 //      return new UnknownLengthFileInStream(status, options, context);
       throw new UnsupportedOperationException("FileInStreamV2 not support unknown size file");
     }
-    return new FileInStreamV2(status, options, context);
+    return new FileInStreamV4(status, options, context, tmpBlockPath);
   }
 
 
@@ -171,6 +179,12 @@ public class FileInStreamV2 extends FileInStream {
       mCurrentBlockInStream.close();
     }
     input.close();
+    try {
+      LOG.warn("delete tmp local disk data at  path:{}", mTmpBlockPath);
+      org.apache.commons.io.FileUtils.forceDelete(new File(mTmpBlockPath));
+    } catch (IOException e) {
+      LOG.warn("the path:{} can't delete", mTmpBlockPath);
+    }
     mClosed = true;
   }
 
@@ -222,8 +236,8 @@ public class FileInStreamV2 extends FileInStream {
   public int positionedRead(long pos, byte[] b, int off, int len) throws IOException {
     if (!PACKET_STREAMING_ENABLED) {
       throw new RuntimeException(String.format(
-              "Positioned read is not supported, please set %s to true to enable positioned read.",
-              PropertyKey.USER_PACKET_STREAMING_ENABLED.toString()));
+          "Positioned read is not supported, please set %s to true to enable positioned read.",
+          PropertyKey.USER_PACKET_STREAMING_ENABLED.toString()));
     }
     if (pos < 0 || pos >= mFileLength) {
       return -1;
@@ -286,7 +300,7 @@ public class FileInStreamV2 extends FileInStream {
     if (pos < 0 || pos > mFileLength) {
       Preconditions.checkArgument(pos >= 0, PreconditionMessage.ERR_SEEK_NEGATIVE.toString(), pos);
       Preconditions.checkArgument(pos <= mFileLength,
-              PreconditionMessage.ERR_SEEK_PAST_END_OF_FILE.toString(), pos);
+          PreconditionMessage.ERR_SEEK_PAST_END_OF_FILE.toString(), pos);
     }
     ((Seekable) mCurrentBlockInStream).seek(pos);
   }
@@ -319,19 +333,19 @@ public class FileInStreamV2 extends FileInStream {
    * Creates and returns a {@link InputStream} for the UFS.
    *
    * @param blockStart the offset to start the block from
-   * @param length     the length of the block
-   * @param path       the UFS path
+   * @param length the length of the block
+   * @param path the UFS path
    * @return the {@link InputStream} for the UFS
    * @throws IOException if the stream cannot be created
    */
   protected InputStream createUnderStoreBlockInStream(long blockStart, long length, String path)
-          throws IOException {
+      throws IOException {
     return new UnderStoreBlockInStream(mContext, blockStart, length, mBlockSize,
-            getUnderStoreStreamFactory(path, mContext));
+        getUnderStoreStreamFactory(path, mContext));
   }
 
   protected UnderStoreStreamFactory getUnderStoreStreamFactory(String path, FileSystemContext
-          context) throws IOException {
+      context) throws IOException {
     if (Configuration.getBoolean(PropertyKey.USER_UFS_DELEGATION_ENABLED)) {
       return new DelegatedUnderStoreStreamFactory(context, path);
     } else {
@@ -369,8 +383,8 @@ public class FileInStreamV2 extends FileInStream {
     }
     if (mCurrentCacheStream != null && inStreamRemaining() != cacheStreamRemaining()) {
       throw new IllegalStateException(
-              String.format("BlockInStream and CacheStream is out of sync %d %d.",
-                      inStreamRemaining(), cacheStreamRemaining()));
+          String.format("BlockInStream and CacheStream is out of sync %d %d.",
+              inStreamRemaining(), cacheStreamRemaining()));
     }
     return inStreamRemaining() == 0;
   }
@@ -409,8 +423,8 @@ public class FileInStreamV2 extends FileInStream {
         // busy, timeout due to congested network etc). But we want to proceed since we want
         // the user to continue reading when one Alluxio worker is having trouble.
         LOG.info(
-                "Closing or cancelling the cache stream encountered IOExecption {}, reading from the "
-                        + "regular stream won't be affected.", e.getMessage());
+            "Closing or cancelling the cache stream encountered IOExecption {}, reading from the "
+                + "regular stream won't be affected.", e.getMessage());
       }
     }
     mCurrentCacheStream = null;
@@ -430,7 +444,7 @@ public class FileInStreamV2 extends FileInStream {
   private long getBlockId(long pos) {
     int index = (int) (pos / mBlockSize);
     Preconditions
-            .checkState(index < mStatus.getBlockIds().size(), PreconditionMessage.ERR_BLOCK_INDEX);
+        .checkState(index < mStatus.getBlockIds().size(), PreconditionMessage.ERR_BLOCK_INDEX);
     return mStatus.getBlockIds().get(index);
   }
 
@@ -446,11 +460,11 @@ public class FileInStreamV2 extends FileInStream {
       // created the block (either as temp block or committed block). The second sees this
       // exception.
       LOG.info(
-              "The block with ID {} is already stored in the target worker, canceling the cache "
-                      + "request.", getCurrentBlockId());
+          "The block with ID {} is already stored in the target worker, canceling the cache "
+              + "request.", getCurrentBlockId());
     } else {
       LOG.warn("The block with ID {} could not be cached into Alluxio storage.",
-              getCurrentBlockId());
+          getCurrentBlockId());
     }
     closeOrCancelCacheStream();
   }
@@ -507,35 +521,28 @@ public class FileInStreamV2 extends FileInStream {
    */
   private InputStream getBlockInStream(long blockId) throws IOException {
     try {
-      if (mAlluxioStorageType.isPromote()) {
-        try {
-          mBlockStore.promote(blockId);
-        } catch (IOException e) {
-          // Failed to promote.
-          LOG.warn("Promotion of block with ID {} failed.", blockId, e);
-        }
-      }
-      return mBlockStore.getInStream(blockId, mInStreamOptions);
+
+      return mBlockStore.getLocalDiskInStream(blockId, mInStreamOptions, mTmpBlockPath);
     } catch (IOException e) {
       LOG.debug("Failed to get BlockInStream for block with ID {}, using UFS instead. {}", blockId,
-              e);
+          e);
       if (!mStatus.isPersisted()) {
         LOG.error("Could not obtain data for block with ID {} from Alluxio."
-                + " The block is also not available in the under storage.", blockId);
+            + " The block is also not available in the under storage.", blockId);
         throw e;
       }
       long blockStart = BlockId.getSequenceNumber(blockId) * mBlockSize;
       return createUnderStoreBlockInStream(blockStart, getBlockSize(blockStart),
-              mStatus.getUfsPath());
+          mStatus.getUfsPath());
     }
   }
 
   /**
    * Seeks to a file position. Blocks are not cached unless they are fully read. This is only called
-   * by {@link FileInStreamV2#seek}.
+   * by {@link FileInStreamV4#seek}.
    *
    * @param pos The position to seek to. It is guaranteed to be valid (pos >= 0 && pos != mPos &&
-   *            pos <= mFileLength)
+   * pos <= mFileLength)
    * @throws IOException if the seek fails due to an error accessing the stream at the position
    */
   private void seekInternal(long pos) throws IOException {
@@ -547,8 +554,8 @@ public class FileInStreamV2 extends FileInStream {
    */
   private boolean isReadingFromLocalBlockWorker() {
     return (mCurrentBlockInStream instanceof LocalBlockInStreamV2) || (
-            mCurrentBlockInStream instanceof Locatable && ((Locatable) mCurrentBlockInStream)
-                    .isLocal());
+        mCurrentBlockInStream instanceof Locatable && ((Locatable) mCurrentBlockInStream)
+            .isLocal());
   }
 
   /**
@@ -556,8 +563,8 @@ public class FileInStreamV2 extends FileInStream {
    */
   private boolean isReadingFromRemoteBlockWorker() {
     return (mCurrentBlockInStream instanceof RemoteBlockInStream) || (
-            mCurrentBlockInStream instanceof Locatable && !(((Locatable) mCurrentBlockInStream)
-                    .isLocal()));
+        mCurrentBlockInStream instanceof Locatable && !(((Locatable) mCurrentBlockInStream)
+            .isLocal()));
   }
 
 

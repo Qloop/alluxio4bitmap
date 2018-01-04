@@ -163,13 +163,28 @@ public final class AlluxioBlockStore {
     List<BlockLocation> locations = blockInfo.getLocations();
     WorkerNetAddress workerNetAddress =
             locations.get(mRandom.nextInt(locations.size())).getWorkerAddress();
-    LOG.warn("====================================");
-    LOG.warn("==block:{} use remote block", blockId);
-    LOG.warn("====================================");
+
 
     return StreamFactory
             .createRemoteBlockInStream(mContext, blockId, blockInfo.getLength(), workerNetAddress,
                     options);
+  }
+
+  public InputStream getLocalDiskInStream(long blockId, InStreamOptions options,
+                                          String tmpBlockPath)
+          throws IOException {
+    BlockInfo blockInfo;
+    try (CloseableResource<BlockMasterClient> masterClientResource =
+                 mContext.acquireBlockMasterClientResource()) {
+      blockInfo = masterClientResource.get().getBlockInfo(blockId);
+    } catch (AlluxioException e) {
+      throw new IOException(e);
+    }
+    return new alluxio.client.block.LocalBlockInStreamV4(blockId, blockInfo.getLength(),
+            tmpBlockPath, mContext,
+            options);
+
+
   }
 
   /**

@@ -17,7 +17,6 @@ import alluxio.annotation.PublicApi;
 import alluxio.client.ReadType;
 import alluxio.client.file.policy.FileWriteLocationPolicy;
 import alluxio.util.CommonUtils;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -33,8 +32,30 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 @JsonInclude(Include.NON_EMPTY)
 public final class OpenFileOptions {
+  public static final int VERSION_NORMAL = 1;
+  public static final int VERSION_MMAP = 2;
+  public static final int VERSION_PACKET = 3;
+  public static final int VERSION_SPEC = 1024;
   private FileWriteLocationPolicy mLocationPolicy;
   private ReadType mReadType;
+  private int mFileStreamVersion;
+
+  /**
+   * Creates a new instance with defaults based on the configuration.
+   */
+  private OpenFileOptions() {
+    mReadType =
+            Configuration.getEnum(PropertyKey.USER_FILE_READ_TYPE_DEFAULT, ReadType.class);
+    try {
+      mLocationPolicy = CommonUtils.createNewClassInstance(
+              Configuration.<FileWriteLocationPolicy>getClass(
+                      PropertyKey.USER_FILE_WRITE_LOCATION_POLICY), new Class[]{}, new Object[]{});
+
+      mFileStreamVersion = Configuration.getInt(PropertyKey.USER_FILE_IN_STREAM_VERSION);
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
 
   /**
    * @return the default {@link InStreamOptions}
@@ -44,40 +65,11 @@ public final class OpenFileOptions {
   }
 
   /**
-   * Creates a new instance with defaults based on the configuration.
-   */
-  private OpenFileOptions() {
-    mReadType =
-        Configuration.getEnum(PropertyKey.USER_FILE_READ_TYPE_DEFAULT, ReadType.class);
-    try {
-      mLocationPolicy = CommonUtils.createNewClassInstance(
-          Configuration.<FileWriteLocationPolicy>getClass(
-              PropertyKey.USER_FILE_WRITE_LOCATION_POLICY), new Class[] {}, new Object[] {});
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  /**
    * @return the location policy used when storing data to Alluxio
    */
   @JsonIgnore
   public FileWriteLocationPolicy getLocationPolicy() {
     return mLocationPolicy;
-  }
-
-  /**
-   * @return the location policy class used when storing data to Alluxio
-   */
-  public String getLocationPolicyClass() {
-    return mLocationPolicy.getClass().getCanonicalName();
-  }
-
-  /**
-   * @return the read type
-   */
-  public ReadType getReadType() {
-    return mReadType;
   }
 
   /**
@@ -90,6 +82,26 @@ public final class OpenFileOptions {
     return this;
   }
 
+  public int getFileStreamVersion() {
+    return mFileStreamVersion;
+  }
+
+  public OpenFileOptions setFileStreamVersion(int version) {
+    if (!(version == 1 || version == 2 || version == 3 || version == 1024)) {
+      throw new RuntimeException("there isn't the file stream with version:" + version);
+    } else {
+      this.mFileStreamVersion = version;
+    }
+    return this;
+  }
+
+  /**
+   * @return the location policy class used when storing data to Alluxio
+   */
+  public String getLocationPolicyClass() {
+    return mLocationPolicy.getClass().getCanonicalName();
+  }
+
   /**
    * @param className the location policy class to use when storing data to Alluxio
    * @return the updated options object
@@ -97,13 +109,20 @@ public final class OpenFileOptions {
   public OpenFileOptions setLocationPolicyClass(String className) {
     try {
       @SuppressWarnings("unchecked") Class<FileWriteLocationPolicy> clazz =
-          (Class<FileWriteLocationPolicy>) Class.forName(className);
-      mLocationPolicy = CommonUtils.createNewClassInstance(clazz, new Class[] {}, new Object[] {});
+              (Class<FileWriteLocationPolicy>) Class.forName(className);
+      mLocationPolicy = CommonUtils.createNewClassInstance(clazz, new Class[]{}, new Object[]{});
       return this;
     } catch (Exception e) {
       Throwables.propagate(e);
     }
     return this;
+  }
+
+  /**
+   * @return the read type
+   */
+  public ReadType getReadType() {
+    return mReadType;
   }
 
   /**
@@ -119,7 +138,7 @@ public final class OpenFileOptions {
    * @return the {@link InStreamOptions} representation of this object
    */
   public InStreamOptions toInStreamOptions() {
-    return InStreamOptions.defaults().setReadType(mReadType).setLocationPolicy(mLocationPolicy);
+    return InStreamOptions.defaults().setReadType(mReadType).setLocationPolicy(mLocationPolicy).setVersion(mFileStreamVersion);
   }
 
   @Override
@@ -132,19 +151,20 @@ public final class OpenFileOptions {
     }
     OpenFileOptions that = (OpenFileOptions) o;
     return Objects.equal(mLocationPolicy, that.mLocationPolicy)
-        && Objects.equal(mReadType, that.mReadType);
+            && Objects.equal(mReadType, that.mReadType) && Objects.equal(mFileStreamVersion, that.mFileStreamVersion);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(mLocationPolicy, mReadType);
+    return Objects.hashCode(mLocationPolicy, mReadType, mFileStreamVersion);
   }
 
   @Override
   public String toString() {
     return Objects.toStringHelper(this)
-        .add("locationPolicy", mLocationPolicy)
-        .add("readType", mReadType)
-        .toString();
+            .add("locationPolicy", mLocationPolicy)
+            .add("readType", mReadType)
+            .add("streamVersion", mFileStreamVersion)
+            .toString();
   }
 }

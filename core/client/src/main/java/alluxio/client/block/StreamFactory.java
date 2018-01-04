@@ -96,10 +96,11 @@ public final class StreamFactory {
     if (PACKET_STREAMING_ENABLED) {
       return BlockInStream.createLocalBlockInStream(blockId, blockSize, address, context, options);
     } else {
-      if (Configuration.getInt(PropertyKey.USER_FILE_IN_STREAM_VERSION) == 1) {
+      int version = options.getVersion();
+      if (version == 1) {
         return new alluxio.client.block.LocalBlockInStream(blockId, blockSize, address, context,
                 options);
-      } else if (Configuration.getInt(PropertyKey.USER_FILE_IN_STREAM_VERSION) == 2) {
+      } else if (version == 2) {
         return new alluxio.client.block.LocalBlockInStreamV2(blockId, blockSize, address, context,
                 options);
       } else {

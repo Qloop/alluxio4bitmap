@@ -321,6 +321,7 @@ public final class FileInStreamV3IntegrationTest {
         for (int i = 0; i < len; i++) {
           Assert.assertEquals(i, is.readByte(i));
         }
+        is.close();
       }
     }
 

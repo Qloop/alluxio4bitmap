@@ -18,7 +18,6 @@ import alluxio.client.AlluxioStorageType;
 import alluxio.client.ReadType;
 import alluxio.client.file.policy.FileWriteLocationPolicy;
 import alluxio.util.CommonUtils;
-
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 
@@ -32,13 +31,33 @@ import javax.annotation.concurrent.NotThreadSafe;
 public final class InStreamOptions {
   private FileWriteLocationPolicy mLocationPolicy;
   private ReadType mReadType;
-  /** Cache incomplete blocks if Alluxio is configured to store blocks in Alluxio storage. */
+  /**
+   * Cache incomplete blocks if Alluxio is configured to store blocks in Alluxio storage.
+   */
   private boolean mCachePartiallyReadBlock;
   /**
    * The cache read buffer size in seek. This is only used if {@link #mCachePartiallyReadBlock}
    * is enabled.
    */
   private long mSeekBufferSizeBytes;
+  private int mVersion;
+
+  private InStreamOptions() {
+    mReadType = Configuration.getEnum(PropertyKey.USER_FILE_READ_TYPE_DEFAULT, ReadType.class);
+    try {
+      mLocationPolicy = CommonUtils.createNewClassInstance(
+              Configuration.<FileWriteLocationPolicy>getClass(
+                      PropertyKey.USER_FILE_WRITE_LOCATION_POLICY), new Class[]{}, new Object[]{});
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    mCachePartiallyReadBlock =
+            Configuration.getBoolean(PropertyKey.USER_FILE_CACHE_PARTIALLY_READ_BLOCK);
+    mSeekBufferSizeBytes =
+            Configuration.getBytes(PropertyKey.USER_FILE_SEEK_BUFFER_SIZE_BYTES);
+    mVersion =
+            Configuration.getInt(PropertyKey.USER_FILE_IN_STREAM_VERSION);
+  }
 
   /**
    * @return the default {@link InStreamOptions}
@@ -47,33 +66,11 @@ public final class InStreamOptions {
     return new InStreamOptions();
   }
 
-  private InStreamOptions() {
-    mReadType = Configuration.getEnum(PropertyKey.USER_FILE_READ_TYPE_DEFAULT, ReadType.class);
-    try {
-      mLocationPolicy = CommonUtils.createNewClassInstance(
-          Configuration.<FileWriteLocationPolicy>getClass(
-              PropertyKey.USER_FILE_WRITE_LOCATION_POLICY), new Class[] {}, new Object[] {});
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    mCachePartiallyReadBlock =
-        Configuration.getBoolean(PropertyKey.USER_FILE_CACHE_PARTIALLY_READ_BLOCK);
-    mSeekBufferSizeBytes =
-        Configuration.getBytes(PropertyKey.USER_FILE_SEEK_BUFFER_SIZE_BYTES);
-  }
-
   /**
    * @return the location policy to use when storing data to Alluxio
    */
   public FileWriteLocationPolicy getLocationPolicy() {
     return mLocationPolicy;
-  }
-
-  /**
-   * @return the Alluxio storage type
-   */
-  public AlluxioStorageType getAlluxioStorageType() {
-    return mReadType.getAlluxioStorageType();
   }
 
   /**
@@ -85,11 +82,31 @@ public final class InStreamOptions {
     return this;
   }
 
+  public int getVersion() {
+    return mVersion;
+  }
+
+  public InStreamOptions setVersion(int version) {
+    if (!(version == 1 || version == 2 || version == 3)) {
+      throw new RuntimeException("there isn't the file stream with version:" + version);
+    } else {
+      this.mVersion = version;
+    }
+    return this;
+  }
+
+  /**
+   * @return the Alluxio storage type
+   */
+  public AlluxioStorageType getAlluxioStorageType() {
+    return mReadType.getAlluxioStorageType();
+  }
+
   /**
    * Sets the {@link ReadType}.
    *
    * @param readType the {@link ReadType} for this operation. Setting this will override the
-   *        {@link AlluxioStorageType}.
+   *                 {@link AlluxioStorageType}.
    * @return the updated options object
    */
   public InStreamOptions setReadType(ReadType readType) {
@@ -124,6 +141,7 @@ public final class InStreamOptions {
 
   /**
    * Sets {@link #mSeekBufferSizeBytes}.
+   *
    * @param bufferSizeBytes the seek buffer size
    * @return the updated ooptions object
    */
@@ -142,25 +160,27 @@ public final class InStreamOptions {
     }
     InStreamOptions that = (InStreamOptions) o;
     return Objects.equal(mLocationPolicy, that.mLocationPolicy)
-        && Objects.equal(mReadType, that.mReadType)
-        && Objects.equal(mCachePartiallyReadBlock, that.mCachePartiallyReadBlock)
-        && Objects.equal(mSeekBufferSizeBytes, that.mSeekBufferSizeBytes);
+            && Objects.equal(mReadType, that.mReadType)
+            && Objects.equal(mCachePartiallyReadBlock, that.mCachePartiallyReadBlock)
+            && Objects.equal(mSeekBufferSizeBytes, that.mSeekBufferSizeBytes)
+            && Objects.equal(mVersion, that.mVersion);
   }
 
   @Override
   public int hashCode() {
     return Objects
-        .hashCode(
-            mLocationPolicy,
-            mReadType,
-            mCachePartiallyReadBlock,
-            mSeekBufferSizeBytes);
+            .hashCode(
+                    mLocationPolicy,
+                    mReadType,
+                    mCachePartiallyReadBlock,
+                    mSeekBufferSizeBytes,
+                    mVersion);
   }
 
   @Override
   public String toString() {
     return Objects.toStringHelper(this).add("locationPolicy", mLocationPolicy)
-        .add("readType", mReadType).add("cachePartiallyReadBlock", mCachePartiallyReadBlock)
-        .add("seekBufferSize", mSeekBufferSizeBytes).toString();
+            .add("readType", mReadType).add("cachePartiallyReadBlock", mCachePartiallyReadBlock)
+            .add("seekBufferSize", mSeekBufferSizeBytes).toString();
   }
 }

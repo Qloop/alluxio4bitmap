@@ -24,8 +24,8 @@ import alluxio.wire.FileInfo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.math.random.JDKRandomGenerator;
-import org.apache.commons.math.random.RandomGenerator;
+import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -176,9 +176,7 @@ public class Input4StringV2Test {
 
   @Test
   public void randomRead() throws Exception {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 10000;
     RandomGenerator generator = new JDKRandomGenerator();
 
@@ -193,9 +191,7 @@ public class Input4StringV2Test {
    */
   @Test
   public void sequenceSeek() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     long fl = UNIT_LENGTH;
     for (int i = 0; i < fl; i++) {
       mTestStream.seek((long) arrayPos(i));
@@ -206,9 +202,7 @@ public class Input4StringV2Test {
 
   @Test
   public void randomSeek() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 1000_0;
     RandomGenerator generator = new JDKRandomGenerator();
 
@@ -221,9 +215,7 @@ public class Input4StringV2Test {
 
   @Test
   public void sequenceSkip() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     long fl = UNIT_LENGTH;
     for (int i = 0; i < fl / 2; i++) {
       mTestStream.skip((long) (4 + i * 2));
@@ -235,9 +227,7 @@ public class Input4StringV2Test {
 
   @Test
   public void randomSkip() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 10000;
     RandomGenerator generator = new JDKRandomGenerator();
 

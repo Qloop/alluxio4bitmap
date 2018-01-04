@@ -21,9 +21,10 @@ import alluxio.client.Cancelable;
 import alluxio.client.Locatable;
 import alluxio.client.PositionedReadable;
 import alluxio.client.block.AlluxioBlockStore;
-import alluxio.client.block.FileInputWrapper;
+import alluxio.client.block.BlockInputWrapper;
 import alluxio.client.block.LocalBlockInStreamV3;
 import alluxio.client.block.RemoteBlockInStream;
+import alluxio.client.block.SeekUnsupportedException;
 import alluxio.client.block.UnderStoreBlockInStream;
 import alluxio.client.block.UnderStoreBlockInStream.UnderStoreStreamFactory;
 import alluxio.client.file.options.InStreamOptions;
@@ -32,12 +33,15 @@ import alluxio.exception.BlockDoesNotExistException;
 import alluxio.exception.InvalidWorkerStateException;
 import alluxio.exception.PreconditionMessage;
 import alluxio.master.block.BlockId;
+
 import com.google.common.base.Preconditions;
-import java.io.IOException;
-import java.io.InputStream;
-import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A streaming API to read a file. This API represents a file as a stream of bytes and provides a
@@ -92,11 +96,20 @@ public class FileInStreamV3 extends FileInStream {
     mBlockStore = AlluxioBlockStore.create(context);
     try {
       updateStreams();
-      Preconditions.checkState(mCurrentBlockInStream instanceof Input,
-          "block stream in file:%s is:%s should be local mode ",
-          mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream",
-          mStatus.getPath());
-      input = (Input) mCurrentBlockInStream;
+      if (mCurrentBlockInStream instanceof Input) {
+        Preconditions.checkState(mCurrentBlockInStream instanceof Input,
+            "block stream in file:%s is:%s should be local mode ",
+            mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream",
+            mStatus.getPath());
+        input = (Input) mCurrentBlockInStream;
+      } else {
+//        LOG.warn("block stream in file:{} is:{} not local mode and use file input wrapper",
+//            mCurrentBlockInStream != null ? mCurrentBlockInStream.getClass() : "null stream");
+//        input = new BlockInputWrapper(mCurrentBlockInStream);
+
+        throw new SeekUnsupportedException("file stream v3 must get a random block stream.The class of block stream returned" +
+                "from block store is:" + mCurrentBlockInStream.getClass());
+      }
     } catch (Exception e) {
       LOG.error("the fileInStream of path:{} failed to update stream", status.getPath());
       throw new RuntimeException(e);
@@ -135,13 +148,10 @@ public class FileInStreamV3 extends FileInStream {
     if (mClosed) {
       return;
     }
-    updateStreams();
     if (mCurrentBlockInStream != null) {
       mCurrentBlockInStream.close();
     }
-    if (input instanceof FileInputWrapper) {
-      input.close();
-    }
+    input.close();
     mClosed = true;
   }
 
@@ -161,6 +171,9 @@ public class FileInStreamV3 extends FileInStream {
 
   @Override
   public int read(byte[] b) throws IOException {
+    if (remaining() <= 0) {
+      return -1;
+    }
     return read(b, 0, b.length);
   }
 
@@ -185,9 +198,7 @@ public class FileInStreamV3 extends FileInStream {
     if (pos < 0 || pos >= mFileLength) {
       return -1;
     }
-
     int lenCopy = len;
-
     while (len > 0) {
       if (pos >= mFileLength) {
         break;
@@ -632,5 +643,10 @@ public class FileInStreamV3 extends FileInStream {
   @Override
   public String readString(int pos) throws IOException {
     return input.readString(pos);
+  }
+
+  @Override
+  public void readBytes(byte[] bytes, int pos) throws IOException {
+    input.readBytes(bytes, pos);
   }
 }

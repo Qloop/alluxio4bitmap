@@ -65,7 +65,7 @@ public final class InputV2IntegrationTest {
     sReadCachePromote = OpenFileOptions.defaults().setReadType(ReadType.CACHE_PROMOTE);
     sReadNoCache = OpenFileOptions.defaults().setReadType(ReadType.NO_CACHE);
     sTestPath = PathUtils.uniqPath();
-    Configuration.set(PropertyKey.USER_FILE_IN_STREAM_VERSION, 2);
+//    Configuration.set(PropertyKey.USER_FILE_IN_STREAM_VERSION, 2);
 
     // Create files of varying size and write type to later read from
     for (int k = MIN_LEN; k <= MAX_LEN; k += DELTA) {

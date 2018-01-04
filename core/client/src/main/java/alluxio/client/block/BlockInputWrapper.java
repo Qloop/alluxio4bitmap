@@ -11,6 +11,7 @@
 package alluxio.client.block;
 
 import alluxio.client.file.Input;
+
 import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
@@ -23,15 +24,15 @@ import java.nio.ByteBuffer;
  *
  * @author Connery
  */
-public class FileInputWrapper implements Input {
+public class BlockInputWrapper implements Input {
   private final static int DEFAULT_BUFFER_SIZE = 81920;
 
   private InputStream is;
   private ByteBuffer buffer;
   private byte[] b;
-  private int mPos;
+  private long mPos;
 
-  public FileInputWrapper(InputStream is) {
+  public BlockInputWrapper(InputStream is) {
     this.is = is;
     mPos = 0;
     init(DEFAULT_BUFFER_SIZE);
@@ -72,6 +73,22 @@ public class FileInputWrapper implements Input {
       buffer.put(b, 0, buffer.remaining());
       buffer.flip();
       int r = buffer.get() & 0xff;
+      mPos += Byte.BYTES;
+      return r;
+    }
+  }
+
+  private byte readOrignalByte() throws IOException {
+    if (buffer.remaining() >= Byte.BYTES) {
+      byte r = buffer.get();
+      mPos += Byte.BYTES;
+      return r;
+    } else {
+      buffer.compact();
+      is.read(b, 0, buffer.remaining());
+      buffer.put(b, 0, buffer.remaining());
+      buffer.flip();
+      byte r = buffer.get();
       mPos += Byte.BYTES;
       return r;
     }
@@ -205,18 +222,15 @@ public class FileInputWrapper implements Input {
 
   @Override
   public void close() throws IOException {
-    /**
-     * is不要在这里释放。
-     */
-//    if (is != null) {
-//      is.close();
-//      is = null;
-//    }
 
     if (buffer != null) {
       ((DirectBuffer) buffer).cleaner().clean();
       buffer = null;
     }
+  }
+
+  public final void seek(long n) throws IOException {
+    throw new SeekUnsupportedException();
   }
 
   public final void skip(int n) throws IOException {
@@ -232,66 +246,59 @@ public class FileInputWrapper implements Input {
 
   @Override
   public int readByte(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readByte();
+    throw new SeekUnsupportedException();
   }
 
   @Override
   public boolean readBool(int pos) throws IOException {
 
-    int n = pos - mPos;
-    skip(n);
-    return readBool();
+    throw new SeekUnsupportedException();
+
   }
 
   @Override
   public int readShort(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readShort();
+    throw new SeekUnsupportedException();
 
   }
 
   @Override
   public int readInt(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readInt();
+
+    throw new SeekUnsupportedException();
 
   }
 
   @Override
   public float readFloat(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readFloat();
+
+    throw new SeekUnsupportedException();
 
   }
 
   @Override
   public long readLong(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readLong();
+
+    throw new SeekUnsupportedException();
 
   }
 
   @Override
   public double readDouble(int pos) throws IOException {
-    int n = pos - mPos;
-    skip(n);
-    return readDouble();
+    throw new SeekUnsupportedException();
 
   }
 
   @Override
   public String readString(int pos) throws IOException {
-    return null;
+    throw new UnsupportedEncodingException();
   }
 
   @Override
   public void readBytes(byte[] bytes, int pos) throws IOException {
+    throw new SeekUnsupportedException();
 
   }
+
+
 }

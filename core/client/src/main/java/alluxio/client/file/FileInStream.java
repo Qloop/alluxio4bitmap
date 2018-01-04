@@ -58,17 +58,12 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @PublicApi
 @NotThreadSafe
-public  class FileInStream extends InputStream implements BoundedStream, Seekable,
-    PositionedReadable ,Input{
+public class FileInStream extends InputStream implements BoundedStream, Seekable,
+    PositionedReadable, Input {
   private static final Logger LOG = LoggerFactory.getLogger(Constants.LOGGER_TYPE);
 
   private static final boolean PACKET_STREAMING_ENABLED =
       Configuration.getBoolean(PropertyKey.USER_PACKET_STREAMING_ENABLED);
-
-  /** The instream options. */
-  private final InStreamOptions mInStreamOptions;
-  /** The outstream options. */
-  private final OutStreamOptions mOutStreamOptions;
   /** How the data should be written into Alluxio space, if at all. */
   protected final AlluxioStorageType mAlluxioStorageType;
   /** Standard block size in bytes of the file, guaranteed for all but the last block. */
@@ -79,15 +74,11 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
   protected final long mFileLength;
   /** File System context containing the {@link FileSystemMasterClient} pool. */
   protected final FileSystemContext mContext;
+  /** The instream options. */
+  private final InStreamOptions mInStreamOptions;
+  /** The outstream options. */
+  private final OutStreamOptions mOutStreamOptions;
   private final AlluxioBlockStore mBlockStore;
-  /** File information. */
-  protected URIStatus mStatus;
-
-  /** If the stream is closed, this can only go from false to true. */
-  protected boolean mClosed;
-  /** Current position of the file instream. */
-  protected long mPos;
-
   /**
    * Caches the entire block even if only a portion of the block is read. Only valid when
    * mShouldCache is true.
@@ -95,6 +86,12 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
   private final boolean mShouldCachePartiallyReadBlock;
   /** Whether to cache blocks in this file into Alluxio. */
   private final boolean mShouldCache;
+  /** File information. */
+  protected URIStatus mStatus;
+  /** If the stream is closed, this can only go from false to true. */
+  protected boolean mClosed;
+  /** Current position of the file instream. */
+  protected long mPos;
 
   // The following 3 fields must be kept in sync. They are only updated in updateStreams together.
   /** Current block in stream backing this stream. */
@@ -107,21 +104,6 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
   /** The read buffer in file seek. This is used in {@link #readCurrentBlockToEnd()}. */
   private byte[] mSeekBuffer;
 
-  /**
-   * Creates a new file input stream.
-   *
-   * @param status the file status
-   * @param options the client options
-   * @param context file system context
-   * @return the created {@link FileInStream} instance
-   */
-  public static FileInStream create(URIStatus status, InStreamOptions options,
-      FileSystemContext context) {
-    if (status.getLength() == Constants.UNKNOWN_SIZE) {
-      return new UnknownLengthFileInStream(status, options, context);
-    }
-    return new FileInStream(status, options, context);
-  }
 
   /**
    * Creates a new file input stream.
@@ -149,6 +131,22 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
     mSeekBuffer = new byte[seekBufferSizeBytes];
     mBlockStore = AlluxioBlockStore.create(context);
     LOG.debug("Init FileInStream with options {}", options);
+  }
+
+  /**
+   * Creates a new file input stream.
+   *
+   * @param status the file status
+   * @param options the client options
+   * @param context file system context
+   * @return the created {@link FileInStream} instance
+   */
+  public static FileInStream create(URIStatus status, InStreamOptions options,
+      FileSystemContext context) {
+    if (status.getLength() == Constants.UNKNOWN_SIZE) {
+      return new UnknownLengthFileInStream(status, options, context);
+    }
+    return new FileInStream(status, options, context);
   }
 
   @Override
@@ -491,6 +489,7 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
       updateBlockInStream(currentBlockId);
       updateCacheStream(currentBlockId);
       mStreamBlockId = currentBlockId;
+
     }
   }
 
@@ -498,13 +497,13 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
    * Updates {@link #mCurrentCacheStream}. When {@code mShouldCache} is true, {@code FileInStream}
    * will create an {@code BlockOutStream} to cache the data read only if
    * <ol>
-   *   <li>the file is read from under storage, or</li>
-   *   <li>the file is read from a remote worker and we have an available local worker.</li>
+   * <li>the file is read from under storage, or</li>
+   * <li>the file is read from a remote worker and we have an available local worker.</li>
    * </ol>
    * The following preconditions are checked inside:
    * <ol>
-   *   <li>{@link #mCurrentCacheStream} is either done or null.</li>
-   *   <li>EOF is reached or {@link #mCurrentBlockInStream} must be valid.</li>
+   * <li>{@link #mCurrentCacheStream} is either done or null.</li>
+   * <li>EOF is reached or {@link #mCurrentBlockInStream} must be valid.</li>
    * </ol>
    * After this call, {@link #mCurrentCacheStream} is either null or freshly created.
    * {@link #mCurrentCacheStream} is created only if the block is not cached in a chosen machine
@@ -611,7 +610,7 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
    * by {@link FileInStream#seek}.
    *
    * @param pos The position to seek to. It is guaranteed to be valid (pos >= 0 && pos != mPos &&
-   *            pos <= mFileLength)
+   * pos <= mFileLength)
    * @throws IOException if the seek fails due to an error accessing the stream at the position
    */
   private void seekInternal(long pos) throws IOException {
@@ -631,7 +630,7 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
    * Invariant: if the current block is to be cached, [0, mPos) should have been cached already.
    *
    * @param pos The position to seek to. It is guaranteed to be valid (pos >= 0 && pos != mPos &&
-   *            pos <= mFileLength).
+   * pos <= mFileLength).
    * @throws IOException if the seek fails due to an error accessing the stream at the position
    */
   private void seekInternalWithCachingPartiallyReadBlock(long pos) throws IOException {
@@ -716,7 +715,6 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
   }
 
   /**
-   *
    * @return true if {@code mCurrentBlockInStream} is reading from a remote block worker
    */
   private boolean isReadingFromRemoteBlockWorker() {
@@ -781,11 +779,10 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
     throw new UnsupportedOperationException();
   }
 
-    @Override
+  @Override
   public int readShort() throws IOException {
-      throw new UnsupportedOperationException();
-
-    }
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public int readInt() throws IOException {
@@ -863,6 +860,11 @@ public  class FileInStream extends InputStream implements BoundedStream, Seekabl
 
   @Override
   public String readString(int pos) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void readBytes(byte[] bytes, int pos) throws IOException {
     throw new UnsupportedOperationException();
   }
 }

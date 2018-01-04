@@ -246,6 +246,7 @@ public enum PropertyKey {
   USER_BLOCK_MASTER_CLIENT_THREADS(Name.USER_BLOCK_MASTER_CLIENT_THREADS, 10),
   USER_BLOCK_REMOTE_READ_BUFFER_SIZE_BYTES(Name.USER_BLOCK_REMOTE_READ_BUFFER_SIZE_BYTES, "8MB"),
   USER_FILE_IN_STREAM_VERSION(Name.USER_FILE_IN_STREAM_VERSION, 1),
+  USER_LOCAL_FILE_IN_STREAM_TMP_PATH(Name.USER_LOCAL_FILE_IN_STREAM_TMP_PATH, "/tmp/alluxio/data"),
   // Deprecated. It will be removed in 2.0.0.
   USER_BLOCK_REMOTE_READER_CLASS(Name.USER_BLOCK_REMOTE_READER_CLASS,
           "alluxio.client.netty.NettyRemoteBlockReader"),
@@ -764,6 +765,8 @@ public enum PropertyKey {
             "alluxio.user.block.remote.read.buffer.size.bytes";
     public static final String USER_FILE_IN_STREAM_VERSION =
             "alluxio.user.local.fileinstream.version";
+    public static final String USER_LOCAL_FILE_IN_STREAM_TMP_PATH =
+        "alluxio.user.local.fileinstream.tmp.path";
     public static final String USER_BLOCK_REMOTE_WRITER_CLASS =
             "alluxio.user.block.remote.writer.class";
     public static final String USER_BLOCK_SIZE_BYTES_DEFAULT =

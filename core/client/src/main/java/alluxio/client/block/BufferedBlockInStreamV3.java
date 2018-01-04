@@ -444,4 +444,12 @@ public abstract class BufferedBlockInStreamV3 extends BlockInStream implements I
     seek(tPos);
     return result;
   }
+
+  @Override
+  public void readBytes(byte[] bytes, int pos) throws IOException {
+    long tPos = mPos;
+    seek(pos);
+    read(bytes);
+    seek(tPos);
+  }
 }

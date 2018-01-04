@@ -71,7 +71,7 @@ public class AlluxioFileStreamSeekTest {
       FileInStream is;
       AlluxioURI uri = new AlluxioURI("/benchmark.txt");
       FileSystem fs = FileSystem.Factory.get();//get fileSystem
-      is = fs.openFile(uri, OpenFileOptions.defaults().setReadType(ReadType.CACHE));
+      is = fs.openFile(uri, OpenFileOptions.defaults().setReadType(ReadType.CACHE_PROMOTE));
       byte[] b = new byte[1];
       long start = System.currentTimeMillis();
       StringBuffer sb = new StringBuffer();
@@ -267,6 +267,8 @@ public class AlluxioFileStreamSeekTest {
   }
 
   @Test
+  @Ignore
+
   public void testNIOSpeed() throws Exception {
     long start = System.currentTimeMillis();
     long r = 0;
@@ -288,6 +290,8 @@ public class AlluxioFileStreamSeekTest {
   }
 
   @Test
+  @Ignore
+
   public void testOpenSpeed() throws Exception {
     long start = System.currentTimeMillis();
     long r = 0;

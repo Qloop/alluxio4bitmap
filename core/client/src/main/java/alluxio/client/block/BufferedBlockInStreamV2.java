@@ -74,7 +74,6 @@ public abstract class BufferedBlockInStreamV2 extends BlockInStream implements I
     mBuffer = allocateBuffer();
     mClosed = false;
     mBlockIsRead = false;
-
   }
 
   public static String toString(byte[] b) {
@@ -375,5 +374,16 @@ public abstract class BufferedBlockInStreamV2 extends BlockInStream implements I
     mBuffer.get(bytes);
     mBuffer.position(tPos);
     return BufferedBlockInStreamV2.toString(bytes);
+  }
+
+  @Override
+  public void readBytes(byte[] bytes, int pos) throws IOException {
+    if (mClosed) {
+      Preconditions.checkState(!mClosed, PreconditionMessage.ERR_CLOSED_BLOCK_IN_STREAM);
+    }
+    int tPos = mBuffer.position();
+    mBuffer.position(pos);
+    mBuffer.get(bytes);
+    mBuffer.position(tPos);
   }
 }

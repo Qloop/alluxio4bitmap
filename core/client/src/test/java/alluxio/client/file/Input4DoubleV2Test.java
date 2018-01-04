@@ -24,8 +24,8 @@ import alluxio.wire.FileInfo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.math.random.JDKRandomGenerator;
-import org.apache.commons.math.random.RandomGenerator;
+import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -135,9 +135,7 @@ public class Input4DoubleV2Test {
 
   @Test
   public void randomRead() throws Exception {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 1000_00;
     RandomGenerator generator = new JDKRandomGenerator();
 
@@ -153,9 +151,7 @@ public class Input4DoubleV2Test {
    */
   @Test
   public void sequenceSeek() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     long fl = UNIT_LENGTH;
     for (int i = 0; i < fl; i++) {
       mTestStream.seek((long) i * UNIT_SIZE);
@@ -166,9 +162,7 @@ public class Input4DoubleV2Test {
 
   @Test
   public void randomSeek() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 1000_00;
     RandomGenerator generator = new JDKRandomGenerator();
 
@@ -181,9 +175,7 @@ public class Input4DoubleV2Test {
 
   @Test
   public void sequenceSkip() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     long fl = UNIT_LENGTH;
     int v = 0;
     double[] con = BufferUtils
@@ -200,9 +192,7 @@ public class Input4DoubleV2Test {
 
   @Test
   public void randomSkip() throws IOException {
-    mTestStream = new FileInStreamV2(mStatus,
-        InStreamOptions.defaults().setReadType(ReadType.CACHE_PROMOTE)
-            .setCachePartiallyReadBlock(true), mContext);
+
     int time = 1000_00;
     RandomGenerator generator = new JDKRandomGenerator();
 
