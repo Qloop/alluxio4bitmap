@@ -15,13 +15,14 @@ import alluxio.client.file.FileSystem;
 import alluxio.wire.WorkerNetAddress;
 import alluxio.worker.AlluxioWorkerService;
 
-import java.io.IOException;
-
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Local Alluxio cluster for integration tests.
- *
+ * <p>
  * Example to use
  * <pre>
  * // Create a cluster instance
@@ -94,6 +95,13 @@ public final class LocalAlluxioCluster extends AbstractLocalAlluxioCluster {
    */
   public AlluxioWorkerService getWorker() {
     return mWorkers.get(0);
+  }
+
+  /**
+   * @return the first worker
+   */
+  public List<AlluxioWorkerService> getWorkers() {
+    return new ArrayList<>(this.mWorkers);
   }
 
   /**
